@@ -119,6 +119,13 @@ function _init()
 	coop=load_level(1)
 end
 
+function moveable(new_pos)
+	if coop.b[new_pos.y+1][new_pos.x+1]==b_ids.air then
+		return true
+	end
+	return false
+end
+
 function mv_fox(mov)
 	if mov.x==0 and mov.y==0 then
 		goto moveskip
@@ -127,9 +134,17 @@ function mv_fox(mov)
 	lst_act=time()
 
 	for e in all(coop.e) do
+		local new_pos={
+			x=(e.x+mov.x)%8,
+			y=(e.y+mov.y)%8,
+		}
+		if not moveable(new_pos) then
+			sfx(60)
+			goto moveskip
+		end
 		if e.id == e_ids.fox then
-			e.x=(e.x+mov.x)%8
-			e.y=(e.y+mov.y)%8
+			e.x=new_pos.x
+			e.y=new_pos.y
 			if mov.f ~= nil then
 				e.f=mov.f
 			end
@@ -172,6 +187,10 @@ function _update()
 		mov.y=-1
 	elseif (btn(⬇️)) then
 		mov.y=1
+	elseif (btn(❎)) then
+		//maybe something happens
+	elseif (btn(🅾️)) then
+		//who knows ?
 	end
 	
 	if gam_stp<(lst-lst_act) then
