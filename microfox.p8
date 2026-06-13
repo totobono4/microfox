@@ -44,7 +44,6 @@ b_data={
 e_ids={
 	fox=1,
 	chicken=2,
-	nothing=99,
 }
 
 e_data={
@@ -53,18 +52,15 @@ e_data={
 		s={0,2},
 		d=0,
 		a=0,
+		f=false,
 	},
 	[e_ids.chicken]={
 		sh=32,
 		s={4,6},
 		d=0,
 		a=0,
+		f=false,
 	},
-	[e_ids.nothing]={
-		sh=99,
-		s={{99}},
-		d=0,
-	}
 }
 
 lvls={
@@ -99,6 +95,7 @@ function new_entity(dat_e)
 		s={unpack(e_data[dat_e.id].s)},
 		d=e_data[dat_e.id].d,
 		a=e_data[dat_e.id].a,
+		f=e_data[dat_e.id].f,
 		
 		t=0,
 		x=dat_e.x,
@@ -143,33 +140,43 @@ end
 
 function mv_fox(mov)
 	if mov.x==0 and mov.y==0 then
-		goto moveskip
+		return
 	end
-	
+		
 	lst_act=time()
+	mv_e(e_ids.fox, mov)
+end
 
+function mv_chicks()
+	
+end
+
+function mv_e(eid, mov)
 	for e in all(coop.e) do
+		if e.id~=eid then
+			goto moveskip
+		end
+	
 		local new_pos={
 			x=(e.x+mov.x)%8,
 			y=(e.y+mov.y)%8,
 		}
+		if mov.d~=0 then
+			e.d=mov.d
+		end
+		if mov.a~=0 then
+			e.a=mov.a
+		end
 		if not moveable(new_pos) then
+			e.f = true
 			if e.id==e_ids.fox then
 				sfx(60)
 			end
 			goto nextmove
 		end
-		if e.id==e_ids.fox then
-			e.x=new_pos.x
-			e.y=new_pos.y
-			if mov.d~=0 then
-				e.d=mov.d
-			end
-			if mov.a~=0 then
-				e.a=mov.a
-			end
-			sfx(62)
-		end
+		e.x=new_pos.x
+		e.y=new_pos.y
+		sfx(62)
 		::nextmove::
 	end
 	::moveskip::
@@ -179,6 +186,7 @@ function up_e()
 	for e in all(coop.e) do
 		e.lst_x=e.x
 		e.lst_y=e.y
+		e.f=false
 	end
 end
 
@@ -250,6 +258,9 @@ function _draw()
 		local jump=sin(dif/gam_stp/2)*jmp_hgt
 		if e.lst_x==e.x and e.lst_y==e.y then
 			jump=0
+		end
+		if e.f then
+			ax=sin(dif/gam_stp*2)*2
 		end
 	
 		spr(
