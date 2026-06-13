@@ -118,7 +118,7 @@ function _init()
 	
 	coop=load_level(1)
 	
-	music(0,3)
+	music(0)
 end
 
 function moveable(new_pos)
@@ -142,7 +142,7 @@ function mv_fox(mov)
 		}
 		if not moveable(new_pos) then
 			if e.id==e_ids.fox then
-				sfx(60,0)
+				sfx(60)
 			end
 			goto nextmove
 		end
@@ -152,7 +152,7 @@ function mv_fox(mov)
 			if mov.f ~= nil then
 				e.f=mov.f
 			end
-			sfx(62,0)
+			sfx(62)
 		end
 		::nextmove::
 	end
