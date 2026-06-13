@@ -117,6 +117,8 @@ function _init()
 	palt(0,false)
 	
 	coop=load_level(1)
+	
+	music(0,3)
 end
 
 function moveable(new_pos)
@@ -139,8 +141,10 @@ function mv_fox(mov)
 			y=(e.y+mov.y)%8,
 		}
 		if not moveable(new_pos) then
-			sfx(60)
-			goto moveskip
+			if e.id==e_ids.fox then
+				sfx(60,0)
+			end
+			goto nextmove
 		end
 		if e.id == e_ids.fox then
 			e.x=new_pos.x
@@ -148,9 +152,10 @@ function mv_fox(mov)
 			if mov.f ~= nil then
 				e.f=mov.f
 			end
+			sfx(62,0)
 		end
+		::nextmove::
 	end
-	
 	::moveskip::
 end
 
