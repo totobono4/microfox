@@ -254,6 +254,39 @@ function _draw()
 			2,2,
 			e.d~=-1
 		)//entity
+		
+		if e.lst_x==0 and e.x==7 then
+			spr(
+				e.s[e.t+1],
+				8*16+ax,e.lst_y*16+ay+jump,
+				2,2,
+				e.d~=-1
+			)//entity crossing
+		end
+		if e.lst_x==7 and e.x==0 then
+			spr(
+				e.s[e.t+1],
+				-1*16+ax,e.lst_y*16+ay+jump,
+				2,2,
+				e.d~=-1
+			)//entity crossing
+		end
+		if e.lst_y==0 and e.y==7 then
+			spr(
+				e.s[e.t+1],
+				e.lst_x*16+ax,8*16+ay+jump,
+				2,2,
+				e.d~=-1
+			)//entity crossing
+		end
+		if e.lst_y==7 and e.y==0 then
+			spr(
+				e.s[e.t+1],
+				e.lst_x*16+ax,-1*16+ay+jump,
+				2,2,
+				e.d~=-1
+			)//entity crossing
+		end
 	end
 end
 
