@@ -41,31 +41,33 @@ e_data={
 	[e_ids.fox]={
 		sh=32,
 		s={0,2},
-		f=false,
+		d=0,
+		a=0,
 	},
 	[e_ids.chicken]={
 		sh=32,
 		s={4,6},
-		f=false,
+		d=0,
+		a=0,
 	},
 	[e_ids.nothing]={
 		sh=99,
 		s={{99}},
-		f=false,
+		d=0,
 	}
 }
 
 lvls={
 	[1]={
 	 b={
-	 	{11,1,1,1,1,1,1,8},
+	 	{11,1,0,0,1,1,1,8},
+	 	{2,0,0,0,0,0,0,2},
+	 	{0,0,0,0,0,0,0,0},
+	 	{0,0,0,0,0,0,0,2},
 	 	{2,0,0,0,0,0,0,2},
 	 	{2,0,0,0,0,0,0,2},
 	 	{2,0,0,0,0,0,0,2},
-	 	{2,0,0,0,0,0,0,2},
-	 	{2,0,0,0,0,0,0,2},
-	 	{2,0,0,0,0,0,0,2},
-	 	{10,1,1,1,1,1,1,9},
+	 	{10,1,0,1,1,1,1,9},
 	 },
 	 e={
 	 	{id=1,x=2,y=2},
@@ -85,7 +87,8 @@ function new_entity(dat_e)
 		id=dat_e.id,
 		sh=e_data[dat_e.id].sh,
 		s={unpack(e_data[dat_e.id].s)},
-		f=e_data[dat_e.id].f,
+		d=e_data[dat_e.id].d,
+		a=e_data[dat_e.id].a,
 		
 		t=0,
 		x=dat_e.x,
@@ -146,11 +149,14 @@ function mv_fox(mov)
 			end
 			goto nextmove
 		end
-		if e.id == e_ids.fox then
+		if e.id==e_ids.fox then
 			e.x=new_pos.x
 			e.y=new_pos.y
-			if mov.f ~= nil then
-				e.f=mov.f
+			if mov.d~=0 then
+				e.d=mov.d
+			end
+			if mov.a~=0 then
+				e.a=mov.a
 			end
 			sfx(62)
 		end
@@ -168,9 +174,7 @@ end
 
 function up_ge()
 	for e in all(coop.e) do
-		if e.id == e_ids.fox then
-			e.t=(flr(time()*4))%#e.s
-		end
+		e.t=(flr(time()*4))%#e.s
 	end
 end
 
@@ -179,19 +183,22 @@ function _update()
 	local mov={
 		x=0,
 		y=0,
-		f=nil,
+		d=0,
+		a=0,
 	}
 
 	if (btn(⬅️)) then
 		mov.x=-1
-		mov.f=false
+		mov.d=-1
 	elseif (btn(➡️)) then
 		mov.x=1
-		mov.f=true
+		mov.d=1
 	elseif (btn(⬆️)) then
 		mov.y=-1
+		mov.a=-1
 	elseif (btn(⬇️)) then
 		mov.y=1
+		mov.a=1
 	elseif (btn(❎)) then
 		//maybe something happens
 	elseif (btn(🅾️)) then
@@ -222,16 +229,10 @@ function _draw()
 	local dif=lst-lst_act
 	
 	for e in all(coop.e) do
-		local ax=dif/gam_stp*16
-		if e.lst_x>e.x then
-			ax=-ax
-		end
+		local ax=dif/gam_stp*16*e.d
+		local ay=dif/gam_stp*16*e.a
 		if e.lst_x==e.x then
-			ax=0
-		end
-		local ay=dif/gam_stp*16
-		if e.lst_y>e.y then
-			ay=-ay
+		 ax=0
 		end
 		if e.lst_y==e.y then
 			ay=0
@@ -245,13 +246,13 @@ function _draw()
 			e.sh,
 			e.lst_x*16+ax,e.lst_y*16+ay,
 			2,2,
-			e.f
+			e.d~=-1
 		)//shadow
 		spr(
 			e.s[e.t+1],
 			e.lst_x*16+ax,e.lst_y*16+ay+jump,
 			2,2,
-			e.f
+			e.d~=-1
 		)//entity
 	end
 end
