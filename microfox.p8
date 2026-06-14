@@ -181,10 +181,14 @@ function mv_chk(fmvs)
 			local nfmv=nil
 			for fmv in all(fmvs) do
 				local dist=abs(e.x-fmv.x+e.y-fmv.y)
+				if dist==0 then
+					goto skipfmv
+				end
 				if dist<min_fox then
 					nfmv=fmv
 					min_fox=dist
 				end
+				::skipfmv::
 			end
 			if min_fox>fle_dst then
 				goto nextchkmove
