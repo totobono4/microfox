@@ -155,6 +155,7 @@ lvls={
 	 	{id=3,x=5,y=5},
 	 	{id=1,x=2,y=3},
 	 	{id=2,x=5,y=3},
+	 	{id=4,x=2,y=3},
 	 },
 	 h=0,
 	}
@@ -201,6 +202,10 @@ function next_level()
 	load_level(lvl)
 end
 
+function reset_level()
+	load_level(lvl)
+end
+
 function load_level(n)
 	local lvl_e={}
 	for dat_e in all(lvls[n+1].e) do
@@ -213,6 +218,29 @@ function load_level(n)
 		e=lvl_e,
 		h=lvls[n+1].h,
 	}
+end
+
+function same_pos(e1,e2)
+ return e1.x==e2.x and e1.y==e2.y
+end
+
+function check_lose()
+	if not check_spawn_hole() then
+		return false
+	end
+
+	local foxes=get_entities(e_ids.fox)
+	local coqs=get_entities(e_ids.coq)
+	
+	for fox in all(foxes) do
+		for coq in all(coqs) do
+			if same_pos(fox,coq) then
+				return true
+			end
+		end
+	end
+	
+	return false
 end
 
 function check_win()
@@ -240,7 +268,7 @@ function eat_chk()
 
 	for fox in all(foxes) do
 		for chk in all(chickens) do
-			if chk.x==fox.x and chk.y==fox.y then
+			if same_pos(fox,chk) then
 				del(coop.e, chk)
 				sfx(58)
 			end
@@ -285,14 +313,21 @@ function up_mv()
 	end
 	
 	if gam_stp<(lst-lst_act) then
+		if check_lose() then
+			reset_level()
+			return
+		end
 		if check_win() then
 			next_level()
 			return
 		end
 		eat_chk()
 		up_e()
-		local fmvs=mv_fox(mov)
-		mv_chk(fmvs)
+		local fox_mov=mv_fox(mov)
+		if fox_mov.moved then
+			mv_chk(fox_mov.fmvs)
+			mv_coq(fox_mov.fmvs)
+		end
 	end
 end
 
@@ -344,6 +379,11 @@ function draw_entities()
 				e.sw,e.sh
 			)//entity
 			goto drawnextentity
+		end
+		if e.id==e_ids.coq then
+			if not check_spawn_hole() then
+				goto drawnextentity
+			end
 		end
 		local ax=dif/gam_stp*16*e.d
 		local ay=dif/gam_stp*16*e.a
@@ -423,156 +463,236 @@ function moveable(new_pos,fbd)
 end
 
 function mv_fox(mov)
+	local ret={
+		moved=false,
+		fmvs={}
+	}
+
 	if mov.x==0 and mov.y==0 then
-		return
+		return ret
 	end
-		
+	
 	lst_act=time()
-	local fmvs={}
+	local foxes=get_entities(e_ids.fox)
 	
-	for e in all(coop.e) do
-		if e.id==e_ids.fox then
-			add(fmvs,{
-				x=e.x,
-				y=e.y
-			})
-			local res=mv_e(e,mov,{})
-			if res.moved then
-				add(fmvs,res)
-			else
-				e.f = true
-				sfx(60)
-			end
+	for e in all(foxes) do
+		add(ret.fmvs,{
+			x=e.x,
+			y=e.y
+		})
+		local res=mv_e(e,mov,{})
+		if res.moved then
+			add(ret.fmvs,res)
+		else
+			e.f = true
+			sfx(60)
 		end
+		ret.moved=true
 	end
-	
-	return fmvs
+	return ret
+end
+
+function get_fmvs(fmvs)
+	local new_fmvs={}
+	for fmv in all(fmvs) do
+		add(new_fmvs,{
+			x=fmv.x,
+			y=fmv.y,
+		})
+		add(new_fmvs,{
+			x=(fmv.x+fle_dst)%8-fle_dst,
+			y=(fmv.y+fle_dst)%8-fle_dst,
+		})
+		add(new_fmvs,{
+			x=(fmv.x-fle_dst)%8+fle_dst,
+			y=(fmv.y-fle_dst)%8+fle_dst,
+		})
+	end
+	return new_fmvs
 end
 
 function mv_chk(fmvs)
-	for e in all(coop.e) do
-		if e.id==e_ids.chk then
-			local min_fox=99
-			local nfmv=nil
-			local new_fmvs={}
-			for fmv in all(fmvs) do
-				add(new_fmvs,{
-					x=fmv.x,
-					y=fmv.y,
-				})
-				add(new_fmvs,{
-					x=(fmv.x+fle_dst)%8-fle_dst,
-					y=(fmv.y+fle_dst)%8-fle_dst,
-				})
-				add(new_fmvs,{
-					x=(fmv.x-fle_dst)%8+fle_dst,
-					y=(fmv.y-fle_dst)%8+fle_dst,
-				})
+	local chickens=get_entities(e_ids.chk)
+
+	local new_fmvs=get_fmvs(fmvs)
+	local nfmv=nil
+
+	for e in all(chickens) do
+		local min_fox=99
+		for fmv in all(new_fmvs) do
+			local dist=abs(abs(e.x-fmv.x)+abs(e.y-fmv.y))
+			if dist==0 then
+				goto skipfmv
 			end
-			for fmv in all(new_fmvs) do
-				local dist=abs(abs(e.x-fmv.x)+abs(e.y-fmv.y))
-				if dist==0 then
-					goto skipfmv
-				end
-				if dist<min_fox then
-					nfmv=fmv
-					min_fox=dist
-				end
-				::skipfmv::
+			if dist<min_fox then
+				nfmv=fmv
+				min_fox=dist
 			end
-			if min_fox>fle_dst then
-				goto nextchkmove
+			::skipfmv::
+		end
+		if min_fox>fle_dst then
+			goto nextchkmove
+		end
+		local xdir=sgn(e.x-nfmv.x)
+		local ydir=sgn(e.y-nfmv.y)
+		if abs(e.x-nfmv.x)>abs(e.y-nfmv.y) then
+			local xdr={
+				x=xdir,y=0,
+				d=xdir,a=0,
+			}
+			local ydr={
+				x=0,y=ydir,
+				d=0,a=ydir,
+			}
+			local up={
+				x=0,y=-1,
+				d=0,a=-1,
+			}
+			local dn={
+				x=0,y=1,
+				d=0,a=1,
+			}
+			local rt={
+				x=1,y=0,
+				d=1,a=0,
+			}
+			local lt={
+				x=-1,y=0,
+				d=-1,a=0,
+			}
+			if mv_e(e,xdr,new_fmvs).moved then
+			elseif mv_e(e,ydr,new_fmvs).moved then
+			elseif mv_e(e,up,new_fmvs).moved then
+			elseif mv_e(e,dn,new_fmvs).moved then
+			elseif mv_e(e,rt,new_fmvs).moved then
+			elseif mv_e(e,lt,new_fmvs).moved then
 			end
-			local xdir=sgn(e.x-nfmv.x)
-			local ydir=sgn(e.y-nfmv.y)
-			if abs(e.x-nfmv.x)>abs(e.y-nfmv.y) then
-				local xdr={
-					x=xdir,
-					y=0,
-					d=xdir,
-					a=0,
-				}
-				local ydr={
-					x=0,
-					y=ydir,
-					d=0,
-					a=ydir,
-				}
-				local up={
-					x=0,
-					y=-1,
-					d=0,
-					a=-1,
-				}
-				local dn={
-					x=0,
-					y=1,
-					d=0,
-					a=1,
-				}
-				local rt={
-					x=1,
-					y=0,
-					d=1,
-					a=0,
-				}
-				local lt={
-					x=-1,
-					y=0,
-					d=-1,
-					a=0,
-				}
-				if mv_e(e,xdr,new_fmvs).moved then
-				elseif mv_e(e,ydr,new_fmvs).moved then
-				elseif mv_e(e,up,new_fmvs).moved then
-				elseif mv_e(e,dn,new_fmvs).moved then
-				elseif mv_e(e,rt,new_fmvs).moved then
-				elseif mv_e(e,lt,new_fmvs).moved then
-				end
-			else
-				local ydr={
-					x=0,
-					y=ydir,
-					d=0,
-					a=ydir,
-				}
-				local xdr={
-					x=xdir,
-					y=0,
-					d=xdir,
-					a=0,
-				}
-				local rt={
-					x=1,
-					y=0,
-					d=1,
-					a=0,
-				}
-				local lt={
-					x=-1,
-					y=0,
-					d=-1,
-					a=0,
-				}
-				local up={
-					x=0,
-					y=-1,
-					d=0,
-					a=-1,
-				}
-				local dn={
-					x=0,
-					y=1,
-					d=0,
-					a=1,
-				}
-				if mv_e(e,ydr,new_fmvs).moved then
-				elseif mv_e(e,xdr,new_fmvs).moved then
-				elseif mv_e(e,rt,new_fmvs).moved then
-				elseif mv_e(e,lt,new_fmvs).moved then
-				elseif mv_e(e,up,new_fmvs).moved then
-				elseif mv_e(e,dn,new_fmvs).moved then
-				end
+		else
+			local ydr={
+				x=0,y=ydir,
+				d=0,a=ydir,
+			}
+			local xdr={
+				x=xdir,y=0,
+				d=xdir,a=0,
+			}
+			local rt={
+				x=1,y=0,
+				d=1,a=0,
+			}
+			local lt={
+				x=-1,y=0,
+				d=-1,a=0,
+			}
+			local up={
+				x=0,y=-1,
+				d=0,a=-1,
+			}
+			local dn={
+				x=0,y=1,
+				d=0,a=1,
+			}
+			if mv_e(e,ydr,new_fmvs).moved then
+			elseif mv_e(e,xdr,new_fmvs).moved then
+			elseif mv_e(e,rt,new_fmvs).moved then
+			elseif mv_e(e,lt,new_fmvs).moved then
+			elseif mv_e(e,up,new_fmvs).moved then
+			elseif mv_e(e,dn,new_fmvs).moved then
+			end
+		end
+		::nextchkmove::
+	end
+end
+
+function mv_coq(fmvs)
+	if not check_spawn_hole() then
+		return
+	end
+
+	local coqs=get_entities(e_ids.coq)
+
+	local new_fmvs=get_fmvs(fmvs)
+	local nfmv=nil
+
+	for e in all(coqs) do
+		local min_fox=99
+		for fmv in all(new_fmvs) do
+			local dist=abs(abs(e.x-fmv.x)+abs(e.y-fmv.y))
+			if dist==0 then
+				goto skipfmv
+			end
+			if dist<min_fox then
+				nfmv=fmv
+				min_fox=dist
+			end
+			::skipfmv::
+		end
+		
+		local xdir=sgn(e.x-nfmv.x)
+		local ydir=sgn(e.y-nfmv.y)
+		if abs(e.x-nfmv.x)>abs(e.y-nfmv.y) then
+			local xdr={
+				x=-xdir,y=0,
+				d=-xdir,a=0,
+			}
+			local ydr={
+				x=0,y=-ydir,
+				d=0,a=-ydir,
+			}
+			local up={
+				x=0,y=-1,
+				d=0,a=-1,
+			}
+			local dn={
+				x=0,y=1,
+				d=0,a=1,
+			}
+			local rt={
+				x=1,y=0,
+				d=1,a=0,
+			}
+			local lt={
+				x=-1,y=0,
+				d=-1,a=0,
+			}
+			if mv_e(e,xdr,{}).moved then
+			elseif mv_e(e,ydr,{}).moved then
+			elseif mv_e(e,up,{}).moved then
+			elseif mv_e(e,dn,{}).moved then
+			elseif mv_e(e,rt,{}).moved then
+			elseif mv_e(e,lt,{}).moved then
+			end
+		else
+			local ydr={
+				x=0,y=-ydir,
+				d=0,a=-ydir,
+			}
+			local xdr={
+				x=-xdir,y=0,
+				d=-xdir,a=0,
+			}
+			local rt={
+				x=1,y=0,
+				d=1,a=0,
+			}
+			local lt={
+				x=-1,y=0,
+				d=-1,a=0,
+			}
+			local up={
+				x=0,y=-1,
+				d=0,a=-1,
+			}
+			local dn={
+				x=0,y=1,
+				d=0,a=1,
+			}
+			if mv_e(e,ydr,{}).moved then
+			elseif mv_e(e,xdr,{}).moved then
+			elseif mv_e(e,rt,{}).moved then
+			elseif mv_e(e,lt,{}).moved then
+			elseif mv_e(e,up,{}).moved then
+			elseif mv_e(e,dn,{}).moved then
 			end
 		end
 		::nextchkmove::
