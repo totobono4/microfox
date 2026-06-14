@@ -455,6 +455,16 @@ function check_lose()
 end
 
 function check_win()
+	local foxes=get_entities(e_ids.fox)
+
+	if #foxes==0 then
+		return true
+	end
+	
+	return false
+end
+
+function win_fox()
 	if not check_spawn_hole() then
 		return false
 	end
@@ -464,13 +474,11 @@ function check_win()
 	
 	for fox in all(foxes) do
 		for hole in all(holes) do
-			if fox.x==hole.x and fox.y==hole.y then
-				return true
+			if same_pos(fox,hole) then
+				del(coop.e, fox)
 			end
 		end
 	end
-	
-	return false
 end
 
 function eat_chk()
@@ -547,6 +555,7 @@ function up_mv()
 			return
 		end
 		eat_chk()
+		win_fox()
 		up_e()
 		local fox_mov=mv_fox(mov)
 		if fox_mov.moved then
