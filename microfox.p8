@@ -338,7 +338,7 @@ lst_act=0
 gam_stp=.2
 anm_stp=16
 jmp_hgt=4
-fle_dst=2
+fle_dst=3
 
 function new_entity(dat_e)
 	return {
@@ -707,8 +707,8 @@ function get_fmvs(fmvs)
 			y=(fmv.y-fle_dst)%8+fle_dst,
 		})
 		add(new_fmvs,{
-			x=(fmv.x+fle_dst)%8-fle_dst,
-			y=(fmv.y-fle_dst)%8+fle_dst,
+			x=(fmv.x-fle_dst)%8+fle_dst,
+			y=(fmv.y+fle_dst)%8-fle_dst,
 		})
 	end
 	return new_fmvs
