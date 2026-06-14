@@ -67,6 +67,7 @@ e_ids={
 	fox=1,
 	chk=2,
 	hol=3,
+	coq=4,
 }
 
 e_data={
@@ -92,6 +93,15 @@ e_data={
 		s={14},
 		sw=2,
 		sh=4,
+	},
+	[e_ids.coq]={
+		shdw=32,
+		s={8,10},
+		sw=2,
+		sh=2,
+		d=0,
+		a=0,
+		f=false,
 	}
 }
 
@@ -119,7 +129,8 @@ lvls={
 	 	{id=3,x=5,y=5},
 	 	{id=1,x=2,y=3},
 	 	{id=2,x=5,y=3},
-	 }
+	 },
+	 h=99,
 	},
 	[2]={
 		m={
@@ -133,7 +144,7 @@ lvls={
 	 b={
 	 	{11,1,1,1,1,1,1,8},
 	 	{2,0,0,0,0,0,0,2},
-	 	{2,0,0,0,0,0,0,2},
+	 	{2,0,0,0,0,0,1,2},
 	 	{2,0,0,0,0,0,0,2},
 	 	{2,0,0,0,0,0,0,2},
 	 	{2,0,0,0,0,0,0,2},
@@ -144,7 +155,8 @@ lvls={
 	 	{id=3,x=5,y=5},
 	 	{id=1,x=2,y=3},
 	 	{id=2,x=5,y=3},
-	 }
+	 },
+	 h=0,
 	}
 }
 
@@ -173,6 +185,16 @@ function new_entity(dat_e)
 		lst_y=dat_e.y,
 	}
 end
+
+function get_entities(eid)
+	local entities={}
+	for e in all(coop.e) do
+		if e.id==eid then
+			add(entities, e)
+		end
+	end
+	return entities
+end
 -->8
 function next_level()
 	lvl=(lvl+1)%#lvls
@@ -189,10 +211,15 @@ function load_level(n)
 		m=lvls[n+1].m,
 		b={unpack(lvls[n+1].b)},
 		e=lvl_e,
+		h=lvls[n+1].h,
 	}
 end
 
 function check_win()
+	if not check_spawn_hole() then
+		return false
+	end
+
 	local foxes=get_entities(e_ids.fox)
 	local holes=get_entities(e_ids.hol)
 	
@@ -205,6 +232,29 @@ function check_win()
 	end
 	
 	return false
+end
+
+function eat_chk()
+	local foxes=get_entities(e_ids.fox)
+	local chickens=get_entities(e_ids.chk)
+
+	for fox in all(foxes) do
+		for chk in all(chickens) do
+			if chk.x==fox.x and chk.y==fox.y then
+				del(coop.e, chk)
+				sfx(58)
+			end
+		end
+	end
+end
+
+function check_spawn_hole()
+	local chickens=get_entities(e_ids.chk)
+	
+	if #chickens>coop.h then
+		return false
+	end
+	return true
 end
 
 function up_mv()
@@ -239,8 +289,10 @@ function up_mv()
 			next_level()
 			return
 		end
+		eat_chk()
 		up_e()
-		mv_fox(mov)
+		local fmvs=mv_fox(mov)
+		mv_chk(fmvs)
 	end
 end
 
@@ -283,6 +335,9 @@ function draw_entities()
 	
 	for e in all(coop.e) do
 		if e.id==e_ids.hol then
+			if not check_spawn_hole() then
+				goto drawnextentity
+			end
 			spr(
 				e.s[e.t+1],
 				e.x*16,e.y*16,
@@ -355,16 +410,6 @@ function draw_entities()
 	end
 end
 -->8
-function get_entities(eid)
-	local entities={}
-	for e in all(coop.e) do
-		if e.id==eid then
-			add(entities, e)
-		end
-	end
-	return entities
-end
-
 function moveable(new_pos,fbd)
 	for fb in all(fbd) do
 		if new_pos.x==fb.x and new_pos.y==fb.y then
@@ -401,7 +446,7 @@ function mv_fox(mov)
 		end
 	end
 	
-	mv_chk(fmvs)
+	return fmvs
 end
 
 function mv_chk(fmvs)
