@@ -1,6 +1,131 @@
 pico-8 cartridge // http://www.pico-8.com
 version 43
 __lua__
+function _init()
+	palt(12,true)
+	palt(0,false)
+	
+	coop=load_level(1)
+	
+	music(0)
+end
+
+function _update()
+	local lst=time()
+	local mov={
+		x=0,
+		y=0,
+		d=0,
+		a=0,
+	}
+
+	if (btn(⬅️)) then
+		mov.x=-1
+		mov.d=-1
+	elseif (btn(➡️)) then
+		mov.x=1
+		mov.d=1
+	elseif (btn(⬆️)) then
+		mov.y=-1
+		mov.a=-1
+	elseif (btn(⬇️)) then
+		mov.y=1
+		mov.a=1
+	elseif (btn(❎)) then
+		//maybe something happens
+	elseif (btn(🅾️)) then
+		//who knows ?
+	end
+	
+	if gam_stp<(lst-lst_act) then
+		up_e()
+		mv_fox(mov)
+	end
+	
+	up_ge()
+end
+
+function _draw()
+	cls()
+	map(0,0,0,0,16,16)
+	for i=0,7 do
+		for j=0,7 do
+			spr(
+				b_data[coop.b[j+1][i+1]],
+				i*16,j*16,2,2
+			)
+		end
+	end
+	
+	local lst=time()
+	local dif=lst-lst_act
+	
+	for e in all(coop.e) do
+		local ax=dif/gam_stp*16*e.d
+		local ay=dif/gam_stp*16*e.a
+		if e.lst_x==e.x then
+		 ax=0
+		end
+		if e.lst_y==e.y then
+			ay=0
+		end
+		local jump=sin(dif/gam_stp/2)*jmp_hgt
+		if e.lst_x==e.x and e.lst_y==e.y then
+			jump=0
+		end
+		if e.f then
+			ax=sin(dif/gam_stp*2)*2
+		end
+	
+		spr(
+			e.sh,
+			e.lst_x*16+ax,e.lst_y*16+ay,
+			2,2,
+			e.d~=-1
+		)//shadow
+		spr(
+			e.s[e.t+1],
+			e.lst_x*16+ax,e.lst_y*16+ay+jump,
+			2,2,
+			e.d~=-1
+		)//entity
+		
+		if e.lst_x==0 and e.x==7 then
+			spr(
+				e.s[e.t+1],
+				8*16+ax,e.lst_y*16+ay+jump,
+				2,2,
+				e.d~=-1
+			)//entity crossing
+		end
+		if e.lst_x==7 and e.x==0 then
+			spr(
+				e.s[e.t+1],
+				-1*16+ax,e.lst_y*16+ay+jump,
+				2,2,
+				e.d~=-1
+			)//entity crossing
+		end
+		if e.lst_y==0 and e.y==7 then
+			spr(
+				e.s[e.t+1],
+				e.lst_x*16+ax,8*16+ay+jump,
+				2,2,
+				e.d~=-1
+			)//entity crossing
+		end
+		if e.lst_y==7 and e.y==0 then
+			spr(
+				e.s[e.t+1],
+				e.lst_x*16+ax,-1*16+ay+jump,
+				2,2,
+				e.d~=-1
+			)//entity crossing
+		end
+	end
+end
+
+-->8
 b_ids={
 	air=0,
 	f_lr=1,
@@ -88,49 +213,7 @@ anm_stp=16
 jmp_hgt=4
 fle_dst=2
 
-function new_entity(dat_e)
-	return {
-		id=dat_e.id,
-		sh=e_data[dat_e.id].sh,
-		s={unpack(e_data[dat_e.id].s)},
-		d=e_data[dat_e.id].d,
-		a=e_data[dat_e.id].a,
-		f=e_data[dat_e.id].f,
-		
-		t=0,
-		x=dat_e.x,
-		y=dat_e.y,
-		lst_x=dat_e.x,
-		lst_y=dat_e.y,
-	}
-end
-
-coop={
-	b={},
-	e={},
-}
-
-function load_level(n)
-	local lvl_e={}
-	for dat_e in all(lvls[n].e) do
-		add(lvl_e, new_entity(dat_e))
-	end
-
-	return {
-		b={unpack(lvls[n].b)},
-		e=lvl_e,
-	}
-end
-
-function _init()
-	palt(12,true)
-	palt(0,false)
-	
-	coop=load_level(1)
-	
-	music(0)
-end
-
+-->8
 function moveable(new_pos,fbd)
 	for fb in all(fbd) do
 		if new_pos.x==fb.x and new_pos.y==fb.y then
@@ -327,6 +410,35 @@ function mv_e(e, mov, fbd)
 		y=e.y,
 	}
 end
+-->8
+function new_entity(dat_e)
+	return {
+		id=dat_e.id,
+		sh=e_data[dat_e.id].sh,
+		s={unpack(e_data[dat_e.id].s)},
+		d=e_data[dat_e.id].d,
+		a=e_data[dat_e.id].a,
+		f=e_data[dat_e.id].f,
+		
+		t=0,
+		x=dat_e.x,
+		y=dat_e.y,
+		lst_x=dat_e.x,
+		lst_y=dat_e.y,
+	}
+end
+
+function load_level(n)
+	local lvl_e={}
+	for dat_e in all(lvls[n].e) do
+		add(lvl_e, new_entity(dat_e))
+	end
+
+	return {
+		b={unpack(lvls[n].b)},
+		e=lvl_e,
+	}
+end
 
 function up_e()
 	for e in all(coop.e) do
@@ -341,122 +453,6 @@ function up_ge()
 		e.t=(flr(time()*4))%#e.s
 	end
 end
-
-function _update()
-	local lst=time()
-	local mov={
-		x=0,
-		y=0,
-		d=0,
-		a=0,
-	}
-
-	if (btn(⬅️)) then
-		mov.x=-1
-		mov.d=-1
-	elseif (btn(➡️)) then
-		mov.x=1
-		mov.d=1
-	elseif (btn(⬆️)) then
-		mov.y=-1
-		mov.a=-1
-	elseif (btn(⬇️)) then
-		mov.y=1
-		mov.a=1
-	elseif (btn(❎)) then
-		//maybe something happens
-	elseif (btn(🅾️)) then
-		//who knows ?
-	end
-	
-	if gam_stp<(lst-lst_act) then
-		up_e()
-		mv_fox(mov)
-	end
-	
-	up_ge()
-end
-
-function _draw()
-	cls()
-	map(0,0,0,0,16,16)
-	for i=0,7 do
-		for j=0,7 do
-			spr(
-				b_data[coop.b[j+1][i+1]],
-				i*16,j*16,2,2
-			)
-		end
-	end
-	
-	local lst=time()
-	local dif=lst-lst_act
-	
-	for e in all(coop.e) do
-		local ax=dif/gam_stp*16*e.d
-		local ay=dif/gam_stp*16*e.a
-		if e.lst_x==e.x then
-		 ax=0
-		end
-		if e.lst_y==e.y then
-			ay=0
-		end
-		local jump=sin(dif/gam_stp/2)*jmp_hgt
-		if e.lst_x==e.x and e.lst_y==e.y then
-			jump=0
-		end
-		if e.f then
-			ax=sin(dif/gam_stp*2)*2
-		end
-	
-		spr(
-			e.sh,
-			e.lst_x*16+ax,e.lst_y*16+ay,
-			2,2,
-			e.d~=-1
-		)//shadow
-		spr(
-			e.s[e.t+1],
-			e.lst_x*16+ax,e.lst_y*16+ay+jump,
-			2,2,
-			e.d~=-1
-		)//entity
-		
-		if e.lst_x==0 and e.x==7 then
-			spr(
-				e.s[e.t+1],
-				8*16+ax,e.lst_y*16+ay+jump,
-				2,2,
-				e.d~=-1
-			)//entity crossing
-		end
-		if e.lst_x==7 and e.x==0 then
-			spr(
-				e.s[e.t+1],
-				-1*16+ax,e.lst_y*16+ay+jump,
-				2,2,
-				e.d~=-1
-			)//entity crossing
-		end
-		if e.lst_y==0 and e.y==7 then
-			spr(
-				e.s[e.t+1],
-				e.lst_x*16+ax,8*16+ay+jump,
-				2,2,
-				e.d~=-1
-			)//entity crossing
-		end
-		if e.lst_y==7 and e.y==0 then
-			spr(
-				e.s[e.t+1],
-				e.lst_x*16+ax,-1*16+ay+jump,
-				2,2,
-				e.d~=-1
-			)//entity crossing
-		end
-	end
-end
-
 __gfx__
 cc0ccccccc0ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc00cccccccccccccc00cccccccccc0000000000000000cccccccccccccccc
 cc00ccccc00ccccccc0ccccccc0ccccccccc00cccccccccccccc00ccccccccccccc04400ccccccccccc04400cccccccc0000000000000000cccccc4444cccccc
