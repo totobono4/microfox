@@ -200,10 +200,9 @@ lvls={
 			{id=3,x=1,y=1},
 	 	{id=1,x=1,y=1},
 	 	{id=2,x=6,y=1},
-	 	{id=4,x=6,y=1},
 	 },
 		h=0,
-	 q=0,
+	 q=-1,
 	},
 	[3]={
 		m=maps.green,
@@ -381,6 +380,7 @@ end
 function next_level()
 	lvl=(lvl+1)%#lvls
 	load_level(lvl)
+	sfx(59)
 end
 
 function reset_level()
