@@ -103,6 +103,35 @@ e_data={
 	}
 }
 
+function new_entity(dat_e)
+	return {
+		id=dat_e.id,
+		shdw=e_data[dat_e.id].shdw,
+		s={unpack(e_data[dat_e.id].s)},
+		sw=e_data[dat_e.id].sw,
+		sh=e_data[dat_e.id].sh,
+		d=e_data[dat_e.id].d,
+		a=e_data[dat_e.id].a,
+		f=e_data[dat_e.id].f,
+		
+		t=0,
+		x=dat_e.x,
+		y=dat_e.y,
+		lst_x=dat_e.x,
+		lst_y=dat_e.y,
+	}
+end
+
+function get_entities(eid)
+	local entities={}
+	for e in all(coop.e) do
+		if e.id==eid then
+			add(entities, e)
+		end
+	end
+	return entities
+end
+
 maps={
 	menu={
 		cx=16,
@@ -171,9 +200,10 @@ lvls={
 			{id=3,x=1,y=1},
 	 	{id=1,x=1,y=1},
 	 	{id=2,x=6,y=1},
+	 	{id=4,x=6,y=1},
 	 },
 		h=0,
-	 q=-1,
+	 q=0,
 	},
 	[3]={
 		m=maps.green,
@@ -340,34 +370,6 @@ anm_stp=16
 jmp_hgt=4
 fle_dst=3
 
-function new_entity(dat_e)
-	return {
-		id=dat_e.id,
-		shdw=e_data[dat_e.id].shdw,
-		s={unpack(e_data[dat_e.id].s)},
-		sw=e_data[dat_e.id].sw,
-		sh=e_data[dat_e.id].sh,
-		d=e_data[dat_e.id].d,
-		a=e_data[dat_e.id].a,
-		f=e_data[dat_e.id].f,
-		
-		t=0,
-		x=dat_e.x,
-		y=dat_e.y,
-		lst_x=dat_e.x,
-		lst_y=dat_e.y,
-	}
-end
-
-function get_entities(eid)
-	local entities={}
-	for e in all(coop.e) do
-		if e.id==eid then
-			add(entities, e)
-		end
-	end
-	return entities
-end
 -->8
 function play_music(msq)
 	if cur_msq~=msq then
@@ -417,6 +419,9 @@ function check_lose()
 	for fox in all(foxes) do
 		for coq in all(coqs) do
 			if same_pos(fox,coq) then
+				return true
+			end
+			if same_pos(fox,{coq.lst_x,coq.lst_y}) then
 				return true
 			end
 		end
@@ -504,13 +509,13 @@ function up_mv()
 	end
 	
 	if gam_stp<(lst-lst_act) then
-		if check_spawn_coq() then
-			play_music(musics.coq)
-		end
 		if check_lose() then
 			sfx(57)
 			reset_level()
 			return
+		end
+		if check_spawn_coq() then
+			play_music(musics.coq)
 		end
 		if check_win() then
 			next_level()
@@ -670,12 +675,20 @@ function mv_fox(mov)
 	lst_act=time()
 	local foxes=get_entities(e_ids.fox)
 	
+	local coqs=get_entities(e_ids.coq)
+	local cmvs={}
+	if check_spawn_coq() then
+		for coq in all(coqs) do
+			add(cmvs, coq)
+		end
+	end
+	
 	for e in all(foxes) do
 		add(ret.fmvs,{
 			x=e.x,
 			y=e.y
 		})
-		local res=mv_e(e,mov,{})
+		local res=mv_e(e,mov,cmvs)
 		if res.moved then
 			add(ret.fmvs,res)
 		else
