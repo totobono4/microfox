@@ -43,7 +43,7 @@ b_data={
 
 e_ids={
 	fox=1,
-	chicken=2,
+	chk=2,
 }
 
 e_data={
@@ -54,7 +54,7 @@ e_data={
 		a=0,
 		f=false,
 	},
-	[e_ids.chicken]={
+	[e_ids.chk]={
 		sh=32,
 		s={4,6},
 		d=0,
@@ -77,8 +77,7 @@ lvls={
 	 },
 	 e={
 	 	{id=1,x=2,y=2},
-	 	{id=2,x=6,y=6},
-	 	{id=2,x=5,y=4},
+	 	{id=2,x=4,y=4},
 	 }
 	}
 }
@@ -87,6 +86,7 @@ lst_act=0
 gam_stp=.2
 anm_stp=16
 jmp_hgt=4
+fle_dst=3
 
 function new_entity(dat_e)
 	return {
@@ -131,12 +131,22 @@ function _init()
 	music(0)
 end
 
-function moveable(new_pos)
-	if coop.b[new_pos.y+1][new_pos.x+1]==b_ids.air then
-		return true
+function moveable(new_pos,fbd)
+	for fb in all(fbd) do
+		if new_pos.x==fb.x and new_pos.y==fb.y then
+			return false
+		end
 	end
-	return false
+	if coop.b[new_pos.y+1][new_pos.x+1]~=b_ids.air then
+		return false
+	end
+	return true
 end
+
+info={
+	direction="",
+	next_pos="",
+}
 
 function mv_fox(mov)
 	if mov.x==0 and mov.y==0 then
@@ -144,42 +154,124 @@ function mv_fox(mov)
 	end
 		
 	lst_act=time()
-	mv_e(e_ids.fox, mov)
-end
-
-function mv_chicks()
+	local fmvs={}
 	
-end
-
-function mv_e(eid, mov)
 	for e in all(coop.e) do
-		if e.id~=eid then
-			goto moveskip
-		end
-	
-		local new_pos={
-			x=(e.x+mov.x)%8,
-			y=(e.y+mov.y)%8,
-		}
-		if mov.d~=0 then
-			e.d=mov.d
-		end
-		if mov.a~=0 then
-			e.a=mov.a
-		end
-		if not moveable(new_pos) then
-			e.f = true
-			if e.id==e_ids.fox then
+		if e.id==e_ids.fox then
+			add(fmvs,{
+				x=e.x,
+				y=e.y
+			})
+			local res=mv_e(e,mov,{})
+			if not res.moved then
+				e.f = true
 				sfx(60)
 			end
-			goto nextmove
+			add(fmvs,res)
 		end
-		e.x=new_pos.x
-		e.y=new_pos.y
-		sfx(62)
-		::nextmove::
+	end	
+	
+	mv_chk(fmvs)
+end
+
+function mv_chk(fmvs)
+	for e in all(coop.e) do
+		if e.id==e_ids.chk then
+			local min_fox=99
+			local nfmv=nil
+			for fmv in all(fmvs) do
+				local dist=abs(e.x-fmv.x+e.y-fmv.y)
+				if dist<min_fox then
+					nfmv=fmv
+					min_fox=dist
+				end
+			end
+			if abs(e.x-nfmv.x)<abs(e.y-nfmv.y) then
+				local dir=sgn(e.x-nfmv.x)
+				local dr={
+					x=-dir,
+					y=0,
+					d=-dir,
+					a=0,
+				}
+				local up={
+					x=0,
+					y=-1,
+					d=0,
+					a=1,
+				}
+				local dn={
+					x=0,
+					y=1,
+					d=0,
+					a=-1,
+				}
+				if mv_e(e,dr,fmvs) then
+					info.direction="dir(x)"
+					mv_e(e,dr)
+				elseif mv_e(e,up,fmvs) then
+					info.direction="up"
+				elseif mv_e(e,dn,fmvs) then
+					info.direction="down"
+				end
+			else
+				local dir=sgn(e.y-nfmv.y)
+				local dr={
+					x=0,
+					y=-dir,
+					d=0,
+					a=-dir,
+				}
+				local rt={
+					x=1,
+					y=0,
+					d=1,
+					a=0,
+				}
+				local lt={
+					x=-1,
+					y=0,
+					d=-1,
+					a=0,
+				}
+				if mv_e(e,dr,fmvs).moved then
+					info.direction="dir(y)"
+				elseif mv_e(e,rt,fmvs).moved then
+					info.direction="right"
+				elseif mv_e(e,lt,fmvs).moved then
+					info.direction="left"
+				end
+			end
+		end
 	end
-	::moveskip::
+end
+
+function mv_e(e, mov, fbd)
+	local new_pos={
+		x=(e.x+mov.x)%8,
+		y=(e.y+mov.y)%8,
+	}
+	if mov.d~=0 then
+		e.d=mov.d
+	end
+	if mov.a~=0 then
+		e.a=mov.a
+	end
+	if not moveable(new_pos,fbd) then
+		return {
+			moved=false,
+			x=0,
+			y=0,
+		}
+	end
+	e.x=new_pos.x
+	e.y=new_pos.y
+	sfx(62)
+	return {
+		moved=true,
+		x=e.x,
+		y=e.y,
+	}
 end
 
 function up_e()
@@ -309,6 +401,9 @@ function _draw()
 			)//entity crossing
 		end
 	end
+	
+	print(info.direction)
+	print(info.next_pos)
 end
 
 __gfx__
