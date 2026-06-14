@@ -119,6 +119,7 @@ function new_entity(dat_e)
 		y=dat_e.y,
 		lst_x=dat_e.x,
 		lst_y=dat_e.y,
+		wait=false,
 	}
 end
 
@@ -490,6 +491,7 @@ function up_mv()
 		y=0,
 		d=0,
 		a=0,
+		wait=false,
 	}
 
 	if (btn(⬅️)) then
@@ -505,9 +507,9 @@ function up_mv()
 		mov.y=1
 		mov.a=1
 	elseif (btn(❎)) then
-		//maybe something happens
+		reset_level()
 	elseif (btn(🅾️)) then
-		//who knows ?
+		mov.wait=true
 	end
 	
 	if gam_stp<(lst-lst_act) then
@@ -538,6 +540,7 @@ function up_e()
 		e.lst_x=e.x
 		e.lst_y=e.y
 		e.f=false
+		e.wait=false
 	end
 end
 
@@ -596,7 +599,7 @@ function draw_entities()
 			ay=0
 		end
 		local jump=sin(dif/gam_stp/2)*jmp_hgt
-		if e.lst_x==e.x and e.lst_y==e.y then
+		if e.lst_x==e.x and e.lst_y==e.y and not e.wait then
 			jump=0
 		end
 		if e.f then
@@ -670,7 +673,7 @@ function mv_fox(mov)
 		fmvs={}
 	}
 
-	if mov.x==0 and mov.y==0 then
+	if mov.x==0 and mov.y==0 and not mov.wait then
 		return ret
 	end
 	
@@ -921,6 +924,7 @@ function mv_e(e, mov, fbd)
 	local new_pos={
 		x=(e.x+mov.x)%8,
 		y=(e.y+mov.y)%8,
+		wait=mov.wait,
 	}
 	if mov.d~=0 then
 		e.d=mov.d
@@ -937,6 +941,7 @@ function mv_e(e, mov, fbd)
 	end
 	e.x=new_pos.x
 	e.y=new_pos.y
+	e.wait=new_pos.wait
 	sfx(62)
 	return {
 		moved=true,
