@@ -5,43 +5,13 @@ function _init()
 	palt(12,true)
 	palt(0,false)
 	
-	coop=load_level(1)
+	load_level(lvl)
 	
 	music(0)
 end
 
 function _update()
-	local lst=time()
-	local mov={
-		x=0,
-		y=0,
-		d=0,
-		a=0,
-	}
-
-	if (btn(⬅️)) then
-		mov.x=-1
-		mov.d=-1
-	elseif (btn(➡️)) then
-		mov.x=1
-		mov.d=1
-	elseif (btn(⬆️)) then
-		mov.y=-1
-		mov.a=-1
-	elseif (btn(⬇️)) then
-		mov.y=1
-		mov.a=1
-	elseif (btn(❎)) then
-		//maybe something happens
-	elseif (btn(🅾️)) then
-		//who knows ?
-	end
-	
-	if gam_stp<(lst-lst_act) then
-		up_e()
-		mv_fox(mov)
-	end
-	
+	up_mv()
 	up_ge()
 end
 
@@ -97,25 +67,41 @@ e_ids={
 	fox=1,
 	chk=2,
 	hol=3,
+	coq=4,
 }
 
 e_data={
 	[e_ids.fox]={
-		sh=32,
+		shdw=32,
 		s={0,2},
+		sw=2,
+		sh=2,
 		d=0,
 		a=0,
 		f=false,
 	},
 	[e_ids.chk]={
-		sh=32,
+		shdw=32,
 		s={4,6},
+		sw=2,
+		sh=2,
 		d=0,
 		a=0,
 		f=false,
 	},
 	[e_ids.hol]={
-		s={14}
+		s={14},
+		sw=2,
+		sh=4,
+	},
+	[e_ids.coq]={
+		shdw=32,
+		s={8,10},
+		sw=2,
+		sh=2,
+		d=0,
+		a=0,
+		f=false,
 	}
 }
 
@@ -143,22 +129,51 @@ lvls={
 	 	{id=3,x=5,y=5},
 	 	{id=1,x=2,y=3},
 	 	{id=2,x=5,y=3},
-	 }
+	 },
+	 h=99,
+	},
+	[2]={
+		m={
+			cx=0,
+			cy=0,
+			sx=0,
+			sy=0,
+			cw=16,
+			ch=16,
+		},
+	 b={
+	 	{11,1,1,1,1,1,1,8},
+	 	{2,0,0,0,0,0,0,2},
+	 	{2,0,0,0,0,0,1,2},
+	 	{2,0,0,0,0,0,0,2},
+	 	{2,0,0,0,0,0,0,2},
+	 	{2,0,0,0,0,0,0,2},
+	 	{2,0,0,0,0,0,0,2},
+	 	{10,1,1,1,1,1,1,9},
+	 },
+	 e={
+	 	{id=3,x=5,y=5},
+	 	{id=1,x=2,y=3},
+	 	{id=2,x=5,y=3},
+	 },
+	 h=0,
 	}
 }
 
+lvl=0
 lst_act=0
 gam_stp=.2
 anm_stp=16
 jmp_hgt=4
 fle_dst=2
 
--->8
 function new_entity(dat_e)
 	return {
 		id=dat_e.id,
-		sh=e_data[dat_e.id].sh,
+		shdw=e_data[dat_e.id].shdw,
 		s={unpack(e_data[dat_e.id].s)},
+		sw=e_data[dat_e.id].sw,
+		sh=e_data[dat_e.id].sh,
 		d=e_data[dat_e.id].d,
 		a=e_data[dat_e.id].a,
 		f=e_data[dat_e.id].f,
@@ -171,17 +186,114 @@ function new_entity(dat_e)
 	}
 end
 
+function get_entities(eid)
+	local entities={}
+	for e in all(coop.e) do
+		if e.id==eid then
+			add(entities, e)
+		end
+	end
+	return entities
+end
+-->8
+function next_level()
+	lvl=(lvl+1)%#lvls
+	load_level(lvl)
+end
+
 function load_level(n)
 	local lvl_e={}
-	for dat_e in all(lvls[n].e) do
+	for dat_e in all(lvls[n+1].e) do
 		add(lvl_e, new_entity(dat_e))
 	end
 
-	return {
-		m=lvls[n].m,
-		b={unpack(lvls[n].b)},
+	coop={
+		m=lvls[n+1].m,
+		b={unpack(lvls[n+1].b)},
 		e=lvl_e,
+		h=lvls[n+1].h,
 	}
+end
+
+function check_win()
+	if not check_spawn_hole() then
+		return false
+	end
+
+	local foxes=get_entities(e_ids.fox)
+	local holes=get_entities(e_ids.hol)
+	
+	for fox in all(foxes) do
+		for hole in all(holes) do
+			if fox.x==hole.x and fox.y==hole.y then
+				return true
+			end
+		end
+	end
+	
+	return false
+end
+
+function eat_chk()
+	local foxes=get_entities(e_ids.fox)
+	local chickens=get_entities(e_ids.chk)
+
+	for fox in all(foxes) do
+		for chk in all(chickens) do
+			if chk.x==fox.x and chk.y==fox.y then
+				del(coop.e, chk)
+				sfx(58)
+			end
+		end
+	end
+end
+
+function check_spawn_hole()
+	local chickens=get_entities(e_ids.chk)
+	
+	if #chickens>coop.h then
+		return false
+	end
+	return true
+end
+
+function up_mv()
+	local lst=time()
+	local mov={
+		x=0,
+		y=0,
+		d=0,
+		a=0,
+	}
+
+	if (btn(⬅️)) then
+		mov.x=-1
+		mov.d=-1
+	elseif (btn(➡️)) then
+		mov.x=1
+		mov.d=1
+	elseif (btn(⬆️)) then
+		mov.y=-1
+		mov.a=-1
+	elseif (btn(⬇️)) then
+		mov.y=1
+		mov.a=1
+	elseif (btn(❎)) then
+		//maybe something happens
+	elseif (btn(🅾️)) then
+		//who knows ?
+	end
+	
+	if gam_stp<(lst-lst_act) then
+		if check_win() then
+			next_level()
+			return
+		end
+		eat_chk()
+		up_e()
+		local fmvs=mv_fox(mov)
+		mv_chk(fmvs)
+	end
 end
 
 function up_e()
@@ -223,10 +335,13 @@ function draw_entities()
 	
 	for e in all(coop.e) do
 		if e.id==e_ids.hol then
+			if not check_spawn_hole() then
+				goto drawnextentity
+			end
 			spr(
 				e.s[e.t+1],
 				e.x*16,e.y*16,
-				2,2
+				e.sw,e.sh
 			)//entity
 			goto drawnextentity
 		end
@@ -247,15 +362,15 @@ function draw_entities()
 		end
 	
 		spr(
-			e.sh,
+			e.shdw,
 			e.lst_x*16+ax,e.lst_y*16+ay,
-			2,2,
+			e.sw,e.sh,
 			e.d~=-1
 		)//shadow
 		spr(
 			e.s[e.t+1],
 			e.lst_x*16+ax,e.lst_y*16+ay+jump,
-			2,2,
+			e.sw,e.sh,
 			e.d~=-1
 		)//entity
 		
@@ -263,7 +378,7 @@ function draw_entities()
 			spr(
 				e.s[e.t+1],
 				8*16+ax,e.lst_y*16+ay+jump,
-				2,2,
+				e.sw,e.sh,
 				e.d~=-1
 			)//entity crossing
 		end
@@ -271,7 +386,7 @@ function draw_entities()
 			spr(
 				e.s[e.t+1],
 				-1*16+ax,e.lst_y*16+ay+jump,
-				2,2,
+				e.sw,e.sh,
 				e.d~=-1
 			)//entity crossing
 		end
@@ -279,7 +394,7 @@ function draw_entities()
 			spr(
 				e.s[e.t+1],
 				e.lst_x*16+ax,8*16+ay+jump,
-				2,2,
+				e.sw,e.sh,
 				e.d~=-1
 			)//entity crossing
 		end
@@ -287,7 +402,7 @@ function draw_entities()
 			spr(
 				e.s[e.t+1],
 				e.lst_x*16+ax,-1*16+ay+jump,
-				2,2,
+				e.sw,e.sh,
 				e.d~=-1
 			)//entity crossing
 		end
@@ -331,7 +446,7 @@ function mv_fox(mov)
 		end
 	end
 	
-	mv_chk(fmvs)
+	return fmvs
 end
 
 function mv_chk(fmvs)
@@ -493,37 +608,37 @@ function mv_e(e, mov, fbd)
 end
 __gfx__
 cc0ccccccc0ccccccccccccccccccccccccccccccccccccccccccccccccccccccccc00cccccccccccccc00cccccccccc0000000000000000cccccccccccccccc
-cc00ccccc00ccccccc0ccccccc0ccccccccc00cccccccccccccc00ccccccccccccc04400ccccccccccc04400cccccccc0000000000000000cccccc4444cccccc
-cc090ccc090ccccccc00ccccc00ccccccc00000ccccccccccc00000cccccccccccc04440ccccccccccc04440cccccccc0000000000000000cccc44444444cccc
-cc090cc0970cc00ccc090ccc09000cccc060000cccccccccc060000ccc000ccccc040040cccccccccc040040ccc000cc0000000000000000ccc4444444444ccc
-cc099009770c0770cc090cc0970770ccc000000ccc000cccc000000cc07770cccc000000ccc000cccc000000cc08880c0000000000000000cc445555555544cc
-cc09999970cc0770cc099009770770ccc0007770c07770ccc0007770077000cccc000888cc08880ccc0008880088000c0000000000000000cc445500005544cc
-c0000000000c0970cc0999997009900cc0777770077000ccc07777777707770ccc0888880088000ccc088888888088800000000000000000c44550000005544c
-0790090099709990c00000000000990cc00770777707770cc00770777077700ccc00880088808880cc008800880888000000000000000000c44550000005544c
-0799999997009990079009009970990c079070777077700c079070770677070cc079080888088800c0790808809880800000000000000000c44550000005544c
-099099977770990c079999999700990c099077770677070c099077777770770c099908888098808009990888888808800000000000000000cc445500005544cc
-099999700000990c09909997777090cc099007777770770c099007776677760c099900888888088009990088899888900000000000000000cc444555555444cc
-c0777700999090cc09999970000090cc000007776677760c00000666666660cc0990008889988890099000999999990c0000000000000000ccc4444444444ccc
-cc00000999990cccc077770099990ccccc066666666660cccc06666666660ccc000099999909990c00009999990990cc0000000000000000cccccccccccccccc
-ccc09999709970cccc000009709970ccccc0066600660cccccc006660000cccccccc0099909090cccccc009990900ccc0000000000000000cccccccccccccccc
-ccc07707700770ccccc07707700770cccc0760007600cccccc076000760cccccccc0790007900cccccc079000790cccc0000000000000000cccccccccccccccc
-ccc00000000000ccccc00000000000cccc000000000ccccccc000000000cccccccc000000000ccccccc000000000cccc0000000000000000cccccccccccccccc
-cccccccccccccccc0000000000000000cccccccccccccccc0000000000000000cccc000ccccccccc00000000000000000000000000000000cccccccccccccccc
-cccccccccccccccc0000000000000000cc00c00ccccccccc0000000000000000ccc00400cccccccc00000000000000000000000000000000cccccccccccccccc
-cccccccccccccccc0000000000000000c060000cc000cccc0000000000000000cc044440cc000ccc00000000000000000000000000000000cccccccccccccccc
-cccccccccccccccc0000000000000000c000000cc0770ccc0000000000000000cc000000cc0880cc00000000000000000000000000000000cccccccccccccccc
-cccccccccccccccc0000000000000000c0007770007770cc0000000000000000cc0008880008880c00000000000000000000000000000000ccccdddcdcdccccc
-cccccccccccccccc0000000000000000c0777777777760cc0000000000000000cc0888888888890c00000000000000000000000000000000ccccc6cdcdcdcccc
-cccccccccccccccc0000000000000000c0077077777770cc0000000000000000cc0088008888880c00000000000000000000000000000000cccc6cdc5c6dcccc
-cccccccccccccccc00000000000000000790707777600ccc0000000000000000c0790808888900cc00000000000000000000000000000000cccccdcdc6cdcccc
-cccccccccccccccc000000000000000009907777777770cc0000000000000000009908888888880c00000000000000000000000000000000ccccdcdc6cdccccc
-cccccccccccccccc0000000000000000099007767777770c0000000000000000099900889888888000000000000000000000000000000000ccccc5cd6dc5cccc
-cccccccccccccccc0000000000000000000007707776070c0000000000000000099000880888908000000000000000000000000000000000ccccdcdcdcdccccc
-cccccc0000cccccc0000000000000000cc0666606777600c0000000000000000000099990988890000000000000000000000000000000000cccc4d4dcd46cccc
-ccccc000000ccccc0000000000000000ccc06660066660cc0000000000000000ccc009990099990c00000000000000000000000000000000ccccc46cd4d4cccc
-cccc00000000cccc0000000000000000cccc0000600000cc0000000000000000ccccc0000900000c00000000000000000000000000000000cccc4c45c64dcccc
-cccc00000000cccc0000000000000000ccccc0777000cccc0000000000000000cccccc0777000ccc00000000000000000000000000000000cccccccccccccccc
-ccccc000000ccccc0000000000000000ccccc000000ccccc0000000000000000cccccc000000cccc00000000000000000000000000000000cccccccccccccccc
+cc00ccccc00ccccccc0ccccccc0ccccccccc00cccccccccccccc00ccccccccccccc04400ccccccccccc04400cccccccc0000000000000000cccccccccccccccc
+cc090ccc090ccccccc00ccccc00ccccccc00000ccccccccccc00000cccccccccccc04440ccccccccccc04440cccccccc0000000000000000cccccccccccccccc
+cc090cc0970cc00ccc090ccc09000cccc060000cccccccccc060000ccc000ccccc040040cccccccccc040040ccc000cc0000000000000000cccccccccccccccc
+cc099009770c0770cc090cc0970770ccc000000ccc000cccc000000cc07770cccc000000ccc000cccc000000cc08880c0000000000000000cccccccccccccccc
+cc09999970cc0770cc099009770770ccc0007770c07770ccc0007770077000cccc000888cc08880ccc0008880088000c0000000000000000cccccccccccccccc
+c0000000000c0970cc0999997009900cc0777770077000ccc07777777707770ccc0888880088000ccc088888888088800000000000000000cccccccccccccccc
+0790090099709990c00000000000990cc00770777707770cc00770777077700ccc00880088808880cc008800880888000000000000000000cccccc4444cccccc
+0799999997009990079009009970990c079070777077700c079070770677070cc079080888088800c0790808809880800000000000000000cccc44444444cccc
+099099977770990c079999999700990c099077770677070c099077777770770c099908888098808009990888888808800000000000000000ccc4444444444ccc
+099999700000990c09909997777090cc099007777770770c099007776677760c099900888888088009990088899888900000000000000000cc445555555544cc
+c0777700999090cc09999970000090cc000007776677760c00000666666660cc0990008889988890099000999999990c0000000000000000cc445500005544cc
+cc00000999990cccc077770099990ccccc066666666660cccc06666666660ccc000099999909990c00009999990990cc0000000000000000c44550000005544c
+ccc09999709970cccc000009709970ccccc0066600660cccccc006660000cccccccc0099909090cccccc009990900ccc0000000000000000c44550000005544c
+ccc07707700770ccccc07707700770cccc0760007600cccccc076000760cccccccc0790007900cccccc079000790cccc0000000000000000c44550000005544c
+ccc00000000000ccccc00000000000cccc000000000ccccccc000000000cccccccc000000000ccccccc000000000cccc0000000000000000cc445500005544cc
+cccccccccccccccc0000000000000000cccccccccccccccc0000000000000000cccc000ccccccccc0000000000000000cccccccccccccccccc444555555444cc
+cccccccccccccccc0000000000000000cc00c00ccccccccc0000000000000000ccc00400cccccccc0000000000000000ccccccccccccccccccc4444444444ccc
+cccccccccccccccc0000000000000000c060000cc000cccc0000000000000000cc044440cc000ccc0000000000000000ccccccccccccccccccccc444444ccccc
+cccccccccccccccc0000000000000000c000000cc0770ccc0000000000000000cc000000cc0880cc0000000000000000cccccccccccccccccccccccccccccccc
+cccccccccccccccc0000000000000000c0007770007770cc0000000000000000cc0008880008880c0000000000000000ccccdddcdcdccccccccccccccccccccc
+cccccccccccccccc0000000000000000c0777777777760cc0000000000000000cc0888888888890c0000000000000000ccccc6cdcdcdcccccccccccccccccccc
+cccccccccccccccc0000000000000000c0077077777770cc0000000000000000cc0088008888880c0000000000000000cccc6cdc5c6dcccccccccccccccccccc
+cccccccccccccccc00000000000000000790707777600ccc0000000000000000c0790808888900cc0000000000000000cccccdcdc6cdcccccccccccccccccccc
+cccccccccccccccc000000000000000009907777777770cc0000000000000000009908888888880c0000000000000000ccccdcdc6cdccccccccccccccccccccc
+cccccccccccccccc0000000000000000099007767777770c000000000000000009990088988888800000000000000000ccccc5cd6dc5cccccccccccccccccccc
+cccccccccccccccc0000000000000000000007707776070c000000000000000009900088088890800000000000000000ccccdcdcdcdccccccccccccccccccccc
+cccccc0000cccccc0000000000000000cc0666606777600c000000000000000000009999098889000000000000000000cccc4d4dcd46cccccccccccccccccccc
+ccccc000000ccccc0000000000000000ccc06660066660cc0000000000000000ccc009990099990c0000000000000000ccccc46cd4d4cccccccccccccccccccc
+cccc00000000cccc0000000000000000cccc0000600000cc0000000000000000ccccc0000900000c0000000000000000cccc4c45c64dcccccccccccccccccccc
+cccc00000000cccc0000000000000000ccccc0777000cccc0000000000000000cccccc0777000ccc0000000000000000cccccccccccccccccccccccccccccccc
+ccccc000000ccccc0000000000000000ccccc000000ccccc0000000000000000cccccc000000cccc0000000000000000cccccccccccccccccccccccccccccccc
 ccccccccccccccccccccccccccccccccccccd4dcdddcccccccccc4dcdddcccccccccc4dcdddcccccccccccccccccccccccccc4dcdddcccccccccd4dcdddccccc
 cccccccccccccccccccccccccccccccccccccd46c54dcccccccccd46c54dcccccccccd46c54dcccccccccccccccccccccccccd46c54dcccccccccd46c54dcccc
 ccccccccccccccccccccccccccccccccccccdc6cd4dccccccccccc6cd4dccccccccccc6cd4dccccccccccccccccccccccccccc6cd4dcccccccccdc6cd4dccccc
