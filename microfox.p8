@@ -5,43 +5,13 @@ function _init()
 	palt(12,true)
 	palt(0,false)
 	
-	coop=load_level(1)
+	load_level(lvl)
 	
 	music(0)
 end
 
 function _update()
-	local lst=time()
-	local mov={
-		x=0,
-		y=0,
-		d=0,
-		a=0,
-	}
-
-	if (btn(⬅️)) then
-		mov.x=-1
-		mov.d=-1
-	elseif (btn(➡️)) then
-		mov.x=1
-		mov.d=1
-	elseif (btn(⬆️)) then
-		mov.y=-1
-		mov.a=-1
-	elseif (btn(⬇️)) then
-		mov.y=1
-		mov.a=1
-	elseif (btn(❎)) then
-		//maybe something happens
-	elseif (btn(🅾️)) then
-		//who knows ?
-	end
-	
-	if gam_stp<(lst-lst_act) then
-		up_e()
-		mv_fox(mov)
-	end
-	
+	up_mv()
 	up_ge()
 end
 
@@ -150,16 +120,41 @@ lvls={
 	 	{id=1,x=2,y=3},
 	 	{id=2,x=5,y=3},
 	 }
+	},
+	[2]={
+		m={
+			cx=0,
+			cy=0,
+			sx=0,
+			sy=0,
+			cw=16,
+			ch=16,
+		},
+	 b={
+	 	{11,1,1,1,1,1,1,8},
+	 	{2,0,0,0,0,0,0,2},
+	 	{2,0,0,0,0,0,0,2},
+	 	{2,0,0,0,0,0,0,2},
+	 	{2,0,0,0,0,0,0,2},
+	 	{2,0,0,0,0,0,0,2},
+	 	{2,0,0,0,0,0,0,2},
+	 	{10,1,1,1,1,1,1,9},
+	 },
+	 e={
+	 	{id=3,x=5,y=5},
+	 	{id=1,x=2,y=3},
+	 	{id=2,x=5,y=3},
+	 }
 	}
 }
 
+lvl=0
 lst_act=0
 gam_stp=.2
 anm_stp=16
 jmp_hgt=4
 fle_dst=2
 
--->8
 function new_entity(dat_e)
 	return {
 		id=dat_e.id,
@@ -178,18 +173,75 @@ function new_entity(dat_e)
 		lst_y=dat_e.y,
 	}
 end
+-->8
+function next_level()
+	lvl=(lvl+1)%#lvls
+	load_level(lvl)
+end
 
 function load_level(n)
 	local lvl_e={}
-	for dat_e in all(lvls[n].e) do
+	for dat_e in all(lvls[n+1].e) do
 		add(lvl_e, new_entity(dat_e))
 	end
 
-	return {
-		m=lvls[n].m,
-		b={unpack(lvls[n].b)},
+	coop={
+		m=lvls[n+1].m,
+		b={unpack(lvls[n+1].b)},
 		e=lvl_e,
 	}
+end
+
+function check_win()
+	local foxes=get_entities(e_ids.fox)
+	local holes=get_entities(e_ids.hol)
+	
+	for fox in all(foxes) do
+		for hole in all(holes) do
+			if fox.x==hole.x and fox.y==hole.y then
+				return true
+			end
+		end
+	end
+	
+	return false
+end
+
+function up_mv()
+	local lst=time()
+	local mov={
+		x=0,
+		y=0,
+		d=0,
+		a=0,
+	}
+
+	if (btn(⬅️)) then
+		mov.x=-1
+		mov.d=-1
+	elseif (btn(➡️)) then
+		mov.x=1
+		mov.d=1
+	elseif (btn(⬆️)) then
+		mov.y=-1
+		mov.a=-1
+	elseif (btn(⬇️)) then
+		mov.y=1
+		mov.a=1
+	elseif (btn(❎)) then
+		//maybe something happens
+	elseif (btn(🅾️)) then
+		//who knows ?
+	end
+	
+	if gam_stp<(lst-lst_act) then
+		if check_win() then
+			next_level()
+			return
+		end
+		up_e()
+		mv_fox(mov)
+	end
 end
 
 function up_e()
@@ -303,6 +355,16 @@ function draw_entities()
 	end
 end
 -->8
+function get_entities(eid)
+	local entities={}
+	for e in all(coop.e) do
+		if e.id==eid then
+			add(entities, e)
+		end
+	end
+	return entities
+end
+
 function moveable(new_pos,fbd)
 	for fb in all(fbd) do
 		if new_pos.x==fb.x and new_pos.y==fb.y then
