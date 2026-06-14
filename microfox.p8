@@ -186,41 +186,35 @@ function mv_chk(fmvs)
 					min_fox=dist
 				end
 			end
-			if abs(e.x-nfmv.x)<abs(e.y-nfmv.y) then
-				local dir=sgn(e.x-nfmv.x)
-				local dr={
-					x=-dir,
+			if min_fox>fle_dst then
+				goto nextchkmove
+			end
+			local xdir=sgn(e.x-nfmv.x)
+			local ydir=sgn(e.y-nfmv.y)
+			if abs(e.x-nfmv.x)>abs(e.y-nfmv.y) then
+				local xdr={
+					x=xdir,
 					y=0,
-					d=-dir,
+					d=xdir,
 					a=0,
+				}
+				local ydr={
+					x=0,
+					y=ydir,
+					d=0,
+					a=ydir,
 				}
 				local up={
 					x=0,
 					y=-1,
 					d=0,
-					a=1,
+					a=-1,
 				}
 				local dn={
 					x=0,
 					y=1,
 					d=0,
-					a=-1,
-				}
-				if mv_e(e,dr,fmvs) then
-					info.direction="dir(x)"
-					mv_e(e,dr)
-				elseif mv_e(e,up,fmvs) then
-					info.direction="up"
-				elseif mv_e(e,dn,fmvs) then
-					info.direction="down"
-				end
-			else
-				local dir=sgn(e.y-nfmv.y)
-				local dr={
-					x=0,
-					y=-dir,
-					d=0,
-					a=-dir,
+					a=1,
 				}
 				local rt={
 					x=1,
@@ -234,15 +228,72 @@ function mv_chk(fmvs)
 					d=-1,
 					a=0,
 				}
-				if mv_e(e,dr,fmvs).moved then
+				if mv_e(e,xdr,fmvs).moved then
+					info.direction="dir(x)"
+				elseif mv_e(e,ydr,fmvs).moved then
 					info.direction="dir(y)"
+				elseif mv_e(e,up,fmvs).moved then
+					info.direction="up"
+				elseif mv_e(e,dn,fmvs).moved then
+					info.direction="down"
 				elseif mv_e(e,rt,fmvs).moved then
 					info.direction="right"
 				elseif mv_e(e,lt,fmvs).moved then
 					info.direction="left"
 				end
+			else
+				local ydr={
+					x=0,
+					y=ydir,
+					d=0,
+					a=ydir,
+				}
+				local xdr={
+					x=xdir,
+					y=0,
+					d=xdir,
+					a=0,
+				}
+				local rt={
+					x=1,
+					y=0,
+					d=1,
+					a=0,
+				}
+				local lt={
+					x=-1,
+					y=0,
+					d=-1,
+					a=0,
+				}
+				local up={
+					x=0,
+					y=-1,
+					d=0,
+					a=-1,
+				}
+				local dn={
+					x=0,
+					y=1,
+					d=0,
+					a=1,
+				}
+				if mv_e(e,ydr,fmvs).moved then
+					info.direction="dir(y)"
+				elseif mv_e(e,xdr,fmvs).moved then
+					info.direction="dir(x)"
+				elseif mv_e(e,rt,fmvs).moved then
+					info.direction="right"
+				elseif mv_e(e,lt,fmvs).moved then
+					info.direction="left"
+				elseif mv_e(e,up,fmvs).moved then
+					info.direction="up"
+				elseif mv_e(e,dn,fmvs).moved then
+					info.direction="down"
+				end
 			end
 		end
+		::nextchkmove::
 	end
 end
 
