@@ -86,7 +86,7 @@ lst_act=0
 gam_stp=.2
 anm_stp=16
 jmp_hgt=4
-fle_dst=3
+fle_dst=2
 
 function new_entity(dat_e)
 	return {
@@ -143,12 +143,6 @@ function moveable(new_pos,fbd)
 	return true
 end
 
-info={
-	direction="",
-	next_pos="",
-	forbids="",
-}
-
 function mv_fox(mov)
 	if mov.x==0 and mov.y==0 then
 		return
@@ -181,10 +175,23 @@ function mv_chk(fmvs)
 		if e.id==e_ids.chk then
 			local min_fox=99
 			local nfmv=nil
-			info.forbids=""
+			local new_fmvs={}
 			for fmv in all(fmvs) do
-				info.forbids=info.forbids.."x"..fmv.x.." y"..fmv.y.."\n"
-				local dist=abs(e.x-fmv.x+e.y-fmv.y)
+				add(new_fmvs,{
+					x=fmv.x,
+					y=fmv.y,
+				})
+				add(new_fmvs,{
+					x=(fmv.x+fle_dst)%8-fle_dst,
+					y=(fmv.y+fle_dst)%8-fle_dst,
+				})
+				add(new_fmvs,{
+					x=(fmv.x-fle_dst)%8+fle_dst,
+					y=(fmv.y-fle_dst)%8+fle_dst,
+				})
+			end
+			for fmv in all(new_fmvs) do
+				local dist=abs(abs(e.x-fmv.x)+abs(e.y-fmv.y))
 				if dist==0 then
 					goto skipfmv
 				end
@@ -236,18 +243,12 @@ function mv_chk(fmvs)
 					d=-1,
 					a=0,
 				}
-				if mv_e(e,xdr,fmvs).moved then
-					info.direction="dir(x)"
-				elseif mv_e(e,ydr,fmvs).moved then
-					info.direction="dir(y)"
-				elseif mv_e(e,up,fmvs).moved then
-					info.direction="up"
-				elseif mv_e(e,dn,fmvs).moved then
-					info.direction="down"
-				elseif mv_e(e,rt,fmvs).moved then
-					info.direction="right"
-				elseif mv_e(e,lt,fmvs).moved then
-					info.direction="left"
+				if mv_e(e,xdr,new_fmvs).moved then
+				elseif mv_e(e,ydr,new_fmvs).moved then
+				elseif mv_e(e,up,new_fmvs).moved then
+				elseif mv_e(e,dn,new_fmvs).moved then
+				elseif mv_e(e,rt,new_fmvs).moved then
+				elseif mv_e(e,lt,new_fmvs).moved then
 				end
 			else
 				local ydr={
@@ -286,18 +287,12 @@ function mv_chk(fmvs)
 					d=0,
 					a=1,
 				}
-				if mv_e(e,ydr,fmvs).moved then
-					info.direction="dir(y)"
-				elseif mv_e(e,xdr,fmvs).moved then
-					info.direction="dir(x)"
-				elseif mv_e(e,rt,fmvs).moved then
-					info.direction="right"
-				elseif mv_e(e,lt,fmvs).moved then
-					info.direction="left"
-				elseif mv_e(e,up,fmvs).moved then
-					info.direction="up"
-				elseif mv_e(e,dn,fmvs).moved then
-					info.direction="down"
+				if mv_e(e,ydr,new_fmvs).moved then
+				elseif mv_e(e,xdr,new_fmvs).moved then
+				elseif mv_e(e,rt,new_fmvs).moved then
+				elseif mv_e(e,lt,new_fmvs).moved then
+				elseif mv_e(e,up,new_fmvs).moved then
+				elseif mv_e(e,dn,new_fmvs).moved then
 				end
 			end
 		end
@@ -460,10 +455,6 @@ function _draw()
 			)//entity crossing
 		end
 	end
-	
-	print(info.direction)
-	print(info.next_pos)
-	print(info.forbids)
 end
 
 __gfx__
