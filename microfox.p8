@@ -58,7 +58,7 @@ b_data={
 	[b_ids.f_ou]=98,
 	[b_ids.f_or]=100,
 	[b_ids.f_od]=102,
-	[b_ids.f_oo]=46,
+	[b_ids.f_oo]=44,
 }
 
 e_ids={
