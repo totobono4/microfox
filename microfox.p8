@@ -146,6 +146,7 @@ end
 info={
 	direction="",
 	next_pos="",
+	forbids="",
 }
 
 function mv_fox(mov)
@@ -163,13 +164,14 @@ function mv_fox(mov)
 				y=e.y
 			})
 			local res=mv_e(e,mov,{})
-			if not res.moved then
+			if res.moved then
+				add(fmvs,res)
+			else
 				e.f = true
 				sfx(60)
 			end
-			add(fmvs,res)
 		end
-	end	
+	end
 	
 	mv_chk(fmvs)
 end
@@ -179,7 +181,9 @@ function mv_chk(fmvs)
 		if e.id==e_ids.chk then
 			local min_fox=99
 			local nfmv=nil
+			info.forbids=""
 			for fmv in all(fmvs) do
+				info.forbids=info.forbids.."x"..fmv.x.." y"..fmv.y.."\n"
 				local dist=abs(e.x-fmv.x+e.y-fmv.y)
 				if dist==0 then
 					goto skipfmv
@@ -315,8 +319,8 @@ function mv_e(e, mov, fbd)
 	if not moveable(new_pos,fbd) then
 		return {
 			moved=false,
-			x=0,
-			y=0,
+			x=-1,
+			y=-1,
 		}
 	end
 	e.x=new_pos.x
@@ -459,6 +463,7 @@ function _draw()
 	
 	print(info.direction)
 	print(info.next_pos)
+	print(info.forbids)
 end
 
 __gfx__
